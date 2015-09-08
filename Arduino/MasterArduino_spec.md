@@ -122,9 +122,41 @@ void SerialListen(){
 *Process Command*
 ```Arduino
 
+//Search through serial input for coded value
+void parseNumber(char code, float val){
+	char *ptr = buffer;
+	while ( ptr && *ptr && ptr < buffer + sofar ){
+		if( *ptr == code ){
+			return atof(ptr + 1);
+		}
+	ptr = strchr(ptr, ' ') + 1;
+	}
+return val;
+}
+
 void processCommand(){
 	//check for blank lines
 	if ( buffer[0] = ';' ) return;
+
+	long cmd;
+
+	//Sensor requests will be prepended with the character "A"
+	cmd = parseNumber( 'A', -1);
+	if (cmd > 0){
+		sensorRequest(cmd);
+	}
+
+	//Firing commands will be prepended with the character "B"
+	cmd = parseNumber( 'B', -1);
+	if (cmd > 0){
+
+		int pattern = parseNumber('P', -1);
+
+		if (pattern > 0){
+			fireCommand(cmd, pattern);
+		}
+	}
+
 
 
 }
