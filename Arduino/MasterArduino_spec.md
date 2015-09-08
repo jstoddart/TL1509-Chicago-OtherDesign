@@ -4,9 +4,10 @@
 
 **GLOBAL VARIABLES**
 *i2c Protocol*
-```
+```Arduino
 #include <Wire.h>
 int
+```
 
 
 
