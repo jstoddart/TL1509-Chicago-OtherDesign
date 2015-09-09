@@ -8,6 +8,14 @@
 
 *Request from Master unit, via i2c, for sensor values*
 
+Initiated by: `Arduino Wire.onRequest( eventHandler );`
+Response: ```Arduino
+void eventHandler(){
+	Wire.write(data);
+	}
+	```
+
+
 2) Firing Pattern Write
 
 *Data from Master unit, via i2c, to pass to shift out to pumps*
