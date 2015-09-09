@@ -8,12 +8,13 @@
 
 *Request from Master unit, via i2c, for sensor values*
 
-Initiated by: `Arduino Wire.onRequest( eventHandler );`
-Response: ```Arduino
+Initiated by: `Wire.onRequest( eventHandler );`
+Response:
+```Arduino
 void eventHandler(){
 	Wire.write(data);
 	}
-	```
+```
 
 
 2) Firing Pattern Write
