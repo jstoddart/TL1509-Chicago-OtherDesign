@@ -9,9 +9,11 @@
 *Request from Master unit, via i2c, for sensor values*
 
 Initiated by: `Wire.onRequest( eventHandler );`
+
 Response:
 ```Arduino
 void eventHandler(){
+	byte data = checkSensors();
 	Wire.write(data);
 	}
 ```
@@ -20,6 +22,15 @@ void eventHandler(){
 2) Firing Pattern Write
 
 *Data from Master unit, via i2c, to pass to shift out to pumps*
+
+Initiated by: `Wire.onRecieve( eventHandler )`
+Data format: int (2 bytes) `0b0000000000000001`
+Response:
+```Arduino
+void eventHandler(){
+	fireNozzles( data );
+}
+```
 
 3) IR Sensor Check
 
