@@ -8,8 +8,8 @@
 
 *Request from Master unit, via i2c, for sensor values*
 
-Initiated by: `Wire.onRequest( eventHandler );`
-
+Initiated by:
+`Wire.onRequest( eventHandler );`
 Response:
 ```Arduino
 void eventHandler(){
@@ -24,7 +24,9 @@ void eventHandler(){
 *Data from Master unit, via i2c, to pass to shift out to pumps*
 
 Initiated by: `Wire.onRecieve( eventHandler )`
+
 Data format: int (2 bytes) `0b0000000000000001`
+
 Response:
 ```Arduino
 void eventHandler(){
