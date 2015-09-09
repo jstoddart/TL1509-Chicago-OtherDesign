@@ -205,8 +205,7 @@ void shiftOut( int dataPin, int clockPin, byte dataOut ){
 }
 
 void allOff() {
-  //ground latch pin to begin transmission
-  digitalWrite(SHIFT_LATCH, 0);
+  digitalWrite(SHIFT_LATCH, 0); //ground latch pin to begin transmission
 
   dataLo = lowByte( dataOff );
   dataHi = highByte( dataOff );
@@ -214,6 +213,6 @@ void allOff() {
   shiftOut(SHIFT_DATA, SHIFT_CLOCK, dataLo);
   shiftOut(SHIFT_DATA, SHIFT_CLOCK, dataHi);
 
-  digitalWrite(SHIFT_LATCH, 1);
+  digitalWrite(SHIFT_LATCH, 1); //set latch pin to HIGH to end transmission
 }
 ```
