@@ -5,13 +5,43 @@
 // ///////////////////////////////////////////////
 
 // An abstract device to render bitmaps with bubbles.
+// The rendering target looks like this:
+//
+//          |----|    |----|
+//     |----|  4 |----| 13 |----|
+//     |  0 |----|  9 |----| 18 |
+//     |----|  5 |----| 14 |----|
+//     |  1 |----| 10 |----| 19 |
+//     |----|  6 |----| 15 |----|
+//     |  2 |----| 11 |----| 20 |
+//     |----|  7 |----| 16 |----|
+//     |  3 |----| 12 |----| 21 |
+//     |----|  8 |----| 17 |----|
+//          |----|    |----|
+//
+// Within each tank, the nozzles and the signal bits are ordered like this:
+//
+//                                   -----------------------------------------
+// Pixels                            |  0|  1|  2|  3|  4|  5|  6|  7|  8|  9|
+//                                   -----------------------------------------
+//                                     __  __  __  __  __  __  __  __  __  __
+// Nozzles                            =||==||==||==||==||==||==||==||==||==||=
+//                                      0   1   2   3   4   5   6   7   8   9
+//
+// Signal    -----------------------------------------------------------------
+// bits      | 15| 14| 13| 12| 11| 10|  9|  8|  7|  6|  5|  4|  3|  2|  1|  0|
+//           -----------------------------------------------------------------
+//
 public class BubbleRenderer {
 
     // //////// Constructors. ////////
 
-    // `sizeX` typically indicates the number of nozzles in a row, and
-    // `sizeY` for the number of bubbles in a column.
-    public BubbleRenderer(int sizeX, int sizeY, float threshold, boolean neg) {
+    public BubbleRenderer(float threshold, boolean neg) {
+
+        // `sizeX` indicates the number of nozzles in a row, and
+        // `sizeY` indicates the number of bubbles in a column.
+        int sizeX = N_NOZZLES_PER_TANK * N_TANK_COLUMNS;
+        int sizeY = N_BUBBLE_ROWS_PER_TANK * N_TANK_ROWS;
 
         pg = createGraphics(sizeX, sizeY);
         this.threshold = threshold;
@@ -19,6 +49,8 @@ public class BubbleRenderer {
     }
 
     // //////// Methods. ////////
+
+    // //// Public. ////
 
     // Compute the mask for a given grayscale bitmap for bubble rendering.
     // 
@@ -62,7 +94,7 @@ public class BubbleRenderer {
     //
     // Parameters:
     //
-    //     - image:    The bitmap image to render with bubbles.
+    //     - image:    The bitmap image to be rendered with bubbles.
     //     - elemName: The geometry element to represent a bubble. Supported
     //                 values include "rect" (for rectangles) and "circle"
     //                 (for circles).
@@ -72,7 +104,7 @@ public class BubbleRenderer {
     //
     // Returns:
     //
-    //     A bitmap of the render.     
+    //     A bitmap of the render.
     public PImage render(
         PImage image, String elemName, int cellSize, int elemSize) {
 
@@ -115,20 +147,115 @@ public class BubbleRenderer {
         return pg.get();
     }
 
-    // signals[tank_id][frame]
-    public short[][] signalsTransient(PImage image) {
+    // Create the signals to send to the simulator to create bubbles.
+    //
+    // Parameters:
+    //
+    //     - image: The bitmap image to be rendered with bubbles.
+    //
+    // Returns:
+    //
+    //     A 2D array of short integers (16 bits) representing a sequence
+    //     of signals to send to the simulator over multiple frames:
+    //     `signals[frame]` contains the signals to the simulator at
+    //     Frame `frame`. `signals[frame][tank]` is the signal to
+    //     Tank `tank` at Frame `frame`. One frame corresponds to one
+    //     bubble row.
+    public short[][] getSignals(PImage image) {
 
-        // TODO
+        // Compute the mask for the image.
+        boolean[][] mask = getMask(image);
 
-        return null;
+        // Convert the mask into signals that generate rows of bubbles
+        // to render the image.
+        short[][] signals = new short[N_BUBBLE_ROWS_PER_TANK][N_TANKS];
+
+        // The image coordinates goes from top to bottom (+y) and
+        // left to right (+x).
+
+        // Within each tank, the first bubble row represents pixels with
+        // smaller y, and this row gets emitted first.
+        for (int frame = 0; frame < N_BUBBLE_ROWS_PER_TANK; ++frame) {
+
+            for (int tank = 0; tank < N_TANKS; ++tank) {
+
+                // Get the start position of the mask region corresponding
+                // to `tank`.
+                int[] start = getTankMappingStart(tank);
+
+                // The y coordinate of the pixels in the mask to be rendered
+                // by bubbles in Row `frame`.
+                int y = start[1] + frame;
+
+                short signal = 0;
+
+                // As the drawing at the top of this file shows, the
+                // signal bits and the nozzles have reversed orders, while the
+                // latter is consistent with the pixels in the mask. We thus
+                // start from the rightmost nozzle's signal bit, which will be
+                // eventually shifted to the most significant bit (Bit 9).
+                for (int nozzle = N_NOZZLES_PER_TANK - 1; nozzle >= 0; --nozzle) {
+
+                    // The x coordinate of the pixel to be rendered by
+                    // Nozzle `nozzle`.
+                    int x = start[0] + nozzle;
+                    // Set Bit 0, which is temporarily the signal bit for
+                    // Nozzle `nozzle`, to 1.
+                    if (mask[y][x]) signal |= 1;
+
+                    signal <<= 1;
+                }
+
+                signals[frame][tank] = signal;
+            }
+        }
+
+        return signals;
     }
 
-    // signals[tank_id][frame]
-    public short[][] signalsContinuous(PImage image) {
+    // //// Helper methods. ////
 
-        // TODO
+    // Get the start coordinates of a region in the mask corresponding to
+    // a tank. See drawings at the top.
+    private int[] getTankMappingStart(int tank) {
 
-        return null;
+        int startX;
+        int startY;
+
+        if (tank >= 0 && tank < 4) {
+
+            startX = 0;
+            startY = N_BUBBLE_ROWS_PER_TANK * (tank - 0) + N_BUBBLE_ROWS_PER_TANK / 2;
+
+        } else if (tank >= 4 && tank < 9) {
+
+            startX = N_NOZZLES_PER_TANK;
+            startY = N_BUBBLE_ROWS_PER_TANK * (tank - 4);
+
+        } else if (tank >= 9 && tank < 13) {
+
+            startX = N_NOZZLES_PER_TANK * 2;
+            startY = N_BUBBLE_ROWS_PER_TANK * (tank - 9) + N_BUBBLE_ROWS_PER_TANK / 2;
+
+        } else if (tank >= 13 && tank < 18) {
+
+            startX = N_NOZZLES_PER_TANK * 3;
+            startY = N_BUBBLE_ROWS_PER_TANK * (tank - 13);
+
+        } else if (tank >= 18 && tank < 22) {
+
+            startX = N_NOZZLES_PER_TANK * 4;
+            startY = N_BUBBLE_ROWS_PER_TANK * (tank - 18) + N_BUBBLE_ROWS_PER_TANK / 2;
+
+        } else {
+
+            startX = -1;
+            startY = -1;
+        }
+
+        int[] start = {startX, startY};
+
+        return start;
     }
 
     // //////// Member variables. ////////
@@ -146,10 +273,20 @@ public class BubbleRenderer {
 
     // //////// Constants. ////////
 
+    // //// Appearance. ////
+
     public static final float BACKGROUND_GRAYSCALE = 255.0;
     public static final float BACKGROUND_ALPHA = 255.0;
     public static final float ELEM_FILL_GRAYSCALE = 0.0;
     public static final float ELEM_FILL_ALPHA = 0.0;
     public static final float ELEM_STROKE_GRAYSCALE = 0.0;
     public static final float ELEM_STROKE_ALPHA = 255.0;
+
+    // //// Design. See drawings at the top. ////
+
+    public static final int N_TANKS = 22;
+    public static final int N_TANK_COLUMNS = 5;
+    public static final int N_TANK_ROWS = 5;
+    public static final int N_NOZZLES_PER_TANK = 10;
+    public static final int N_BUBBLE_ROWS_PER_TANK = 10;
 }

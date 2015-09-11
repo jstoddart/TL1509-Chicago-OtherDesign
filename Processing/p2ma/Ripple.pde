@@ -177,11 +177,11 @@ public class Ripple {
     // //// Kinematics. ////
 
     // Number of units that the radius of a ring will increase per frame.
-    private static final float SPEED = 1.0;
+    private static final float SPEED = 10.0;
     // Number of frames between spawning two adjacent rings.
-    private static final int RING_SPAWN_INTERVAL = 20;
+    private static final int RING_SPAWN_INTERVAL = 2;
     // Maximum number of frames a ring can exist for.
-    private static final int MAX_RING_AGE = 300;
+    private static final int MAX_RING_AGE = 18;
     // Maximum number of rings ever spawned for a ripple.
     private static final int MAX_TOTAL_NUM_OF_RINGS = 4;
     // Maximum number of rings currently in a ripple.

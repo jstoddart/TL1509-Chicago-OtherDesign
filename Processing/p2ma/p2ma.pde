@@ -8,28 +8,41 @@
 
 Surface surface;
 BubbleRenderer br;
+Simulator simulator;
+
+// `True` if the simulation is running.
+boolean play = true;
 
 // //////// Global constants. ////////
 
-int RENDER_WIDTH = 50;
-int RENDER_HEIGHT = 50;
-int SURFACE_WIDTH = 50;
-int SURFACE_HEIGHT = 50;
-int INPUT_IMAGE_VIEWPORT_WIDTH = 400;
-int INPUT_IMAGE_VIEWPORT_HEIGHT = 400;
-int STATIC_VIEWPORT_WIDTH = 400;
-int STATIC_VIEWPORT_HEIGHT = 400;
-int DYNAMICS_VIEWPORT_WIDTH = 400;
-int DYNAMICS_VIEWPORT_HEIGHT = 400;
-int WINDOW_WIDTH = 1200;
-int WINDOW_HEIGHT = 500;
-int CELL_SIZE = 8;
-int ELEM_SIZE = 6;
+final int SURFACE_WIDTH = 50;
+final int SURFACE_HEIGHT = 50;
+
+final int SIMULATOR_WIDTH = 300;
+final int SIMULATOR_HEIGHT = 300;
+
+final int SURFACE_VIEWPORT_WIDTH = 300;
+final int SURFACE_VIEWPORT_HEIGHT = 300;
+
+final int RENDERER_VIEWPORT_WIDTH = 300;
+final int RENDERER_VIEWPORT_HEIGHT = 300;
+
+final int SIMULATOR_VIEWPORT_WIDTH = 300;
+final int SIMULATOR_VIEWPORT_HEIGHT = 300;
+
+final int WINDOW_WIDTH = 900;
+final int WINDOW_HEIGHT = 300;
+
+final int CELL_SIZE =
+    RENDERER_VIEWPORT_WIDTH /
+    (BubbleRenderer.N_NOZZLES_PER_TANK * BubbleRenderer.N_TANK_COLUMNS);
+final int ELEM_SIZE = (int)(CELL_SIZE * 0.75);
 
 void setup() {
 
     surface = new Surface(SURFACE_WIDTH, SURFACE_HEIGHT);
-    br = new BubbleRenderer(RENDER_WIDTH, RENDER_HEIGHT, #000001, false);
+    br = new BubbleRenderer(#000001, false);
+    simulator = new Simulator(SIMULATOR_WIDTH, SIMULATOR_HEIGHT);
 }
 
 void settings() {
@@ -39,41 +52,79 @@ void settings() {
 
 void draw() {
 
-    // //// Input image. ////
+    // Update the surface and the bubble renderer only when the simulator is
+    // not busy.
+    if (!simulator.isBusy()) {
 
-    PImage inputImage = surface.render();
-    surface.update();
-    image(inputImage, 0, 0, INPUT_IMAGE_VIEWPORT_WIDTH, INPUT_IMAGE_VIEWPORT_HEIGHT);
+        // //// Surface. ////
 
-    // //// Static bubble render, without physics. ////
+        PImage imageSurface = surface.render();
+        image(imageSurface, 0, 0,
+              SURFACE_VIEWPORT_WIDTH, SURFACE_VIEWPORT_HEIGHT);
+        surface.update();
 
-    PImage imageBubbles = br.render(inputImage, "rect", CELL_SIZE, ELEM_SIZE);
-    image(
-        imageBubbles,
-        INPUT_IMAGE_VIEWPORT_WIDTH, 0,
-        imageBubbles.width, imageBubbles.height);
+        // //// Bubble renderer. ////
 
-    // //// Bubble render with simple physics. ////
+        PImage imageRenderer = br.render(imageSurface, "rect", CELL_SIZE, ELEM_SIZE);
+        image(imageRenderer, SURFACE_VIEWPORT_WIDTH, 0,
+              imageRenderer.width, imageRenderer.height);
 
-    // TODO
+        // Send signals to simulator only if there is any ripple on
+        // the surface.
+        if (surface.getRipples().size() > 0) {
+            short[][] signals = br.getSignals(imageSurface);
+            simulator.send(signals);
+        }
+    }
+
+    // //// Simulator. ////
+
+    PImage imageSimulator = simulator.render();
+    image(imageSimulator,
+          SURFACE_VIEWPORT_WIDTH + RENDERER_VIEWPORT_WIDTH, 0,
+          SIMULATOR_VIEWPORT_WIDTH, SIMULATOR_VIEWPORT_HEIGHT);
+
+    // Update the simulator only if the simulation is playing.
+    if (play) simulator.update();
 }
 
 void mouseClicked() {
 
-    // Click on the input image to generate ripples.
-    if ((mouseX >= INPUT_IMAGE_VIEWPORT_WIDTH) ||
-        (mouseY >= INPUT_IMAGE_VIEWPORT_HEIGHT)) {
+    // Click on the surface viewport to generate ripples.
+    if ((mouseX >= SURFACE_VIEWPORT_WIDTH) ||
+        (mouseY >= SURFACE_VIEWPORT_HEIGHT)) {
+
         return;
     }
 
+    // Create a ripple at where the mouse clicked.
     if (mouseButton == LEFT) {
 
-        // Create a ripple at where the mouse clicked.
-
-        int x = (int) (mouseX * (float) SURFACE_WIDTH / STATIC_VIEWPORT_WIDTH);
-        int y = (int) (mouseY * (float) SURFACE_HEIGHT / STATIC_VIEWPORT_HEIGHT);
+        int x = (int) (mouseX * (float) SURFACE_WIDTH / RENDERER_VIEWPORT_WIDTH);
+        int y = (int) (mouseY * (float) SURFACE_HEIGHT / RENDERER_VIEWPORT_HEIGHT);
 
         Ripple ripple = new Ripple(new PVector(x, y));
         surface.addRipple(ripple);
+    }
+}
+
+void keyPressed() {
+
+    switch (key) {
+
+        // "p" for "pause".
+        case 'p':
+
+            // Toggle the `play` flag.
+            play = !play;
+            break;
+
+        // "s" for "step".
+        case 's':
+
+            // We only need to update the simulator, which drives the update
+            // of the surface and the bubble renderer.
+            simulator.update();
+            break;
     }
 }

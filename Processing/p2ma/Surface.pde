@@ -25,6 +25,11 @@ public class Surface {
         ripples.add(ripple);
     }
 
+    public ArrayList<Ripple> getRipples() {
+
+        return ripples;
+    }
+
     // Step all ripples' animation by one frame and remove dead ripples.
     public void update() {
 
