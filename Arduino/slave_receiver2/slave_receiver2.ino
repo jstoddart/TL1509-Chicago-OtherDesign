@@ -16,9 +16,9 @@
 
 void setup()
 {
-  Wire.begin(9);                // join i2c bus with address #4
+  Wire.begin(8);                // join i2c bus with address #4
   Wire.onReceive(receiveEvent); // register event
-  //Serial.begin(9600);           // start serial for output
+  Serial.begin(9600);           // start serial for output
   pinMode(13, OUTPUT);
 }
 
@@ -31,27 +31,13 @@ void loop()
 // this function is registered as an event, see setup()
 void receiveEvent(int howMany)
 {
-  //while (1 < Wire.available()) // loop through all but the last
-  //{
-  //  char c = Wire.read(); // receive byte as a character
-    //Serial.print(c);         // print the character
-  //}
-//  int x = Wire.read();    // receive byte as an integer
-  //Serial.println(x);         // print the integer
-  
-//  if (on) {
-//    digitalWrite(13, HIGH);
-//  }else{
-//    digitalWrite(13, LOW);
-//  }
-//  on = !on;
-  
   if (Wire.available() == 2) {
     byte lowerByte = Wire.read();
     byte higherByte = Wire.read();
     short signal = (higherByte << 8) | lowerByte;
+    Serial.print(signal);
     byte parity = signal % 2;
-//    byte parity = 1;
+    //    byte parity = 1;
     if (parity) {
       digitalWrite(13, HIGH);
     } else {
@@ -59,10 +45,10 @@ void receiveEvent(int howMany)
     }
   }
 
-//  if (x == 0){
-//    digitalWrite(13, HIGH);
-//  }else{
-//  //delay(1000);
-//    digitalWrite(13, LOW);
-//  }
+  //  if (x == 0){
+  //    digitalWrite(13, HIGH);
+  //  }else{
+  //  //delay(1000);
+  //    digitalWrite(13, LOW);
+  //  }
 }
