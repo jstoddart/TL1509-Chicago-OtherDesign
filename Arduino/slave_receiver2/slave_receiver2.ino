@@ -36,7 +36,7 @@ void receiveEvent(int howMany)
   //  char c = Wire.read(); // receive byte as a character
     //Serial.print(c);         // print the character
   //}
-  int x = Wire.read();    // receive byte as an integer
+//  int x = Wire.read();    // receive byte as an integer
   //Serial.println(x);         // print the integer
   
 //  if (on) {
@@ -46,11 +46,23 @@ void receiveEvent(int howMany)
 //  }
 //  on = !on;
   
-  if (x == 0){
-    digitalWrite(13, HIGH);
-  }else{
-  //delay(1000);
-    digitalWrite(13, LOW);
+  if (Wire.available() == 2) {
+    byte lowerByte = Wire.read();
+    byte higherByte = Wire.read();
+    short signal = (higherByte << 8) | lowerByte;
+    byte parity = signal % 2;
+//    byte parity = 1;
+    if (parity) {
+      digitalWrite(13, HIGH);
+    } else {
+      digitalWrite(13, LOW);
+    }
   }
 
+//  if (x == 0){
+//    digitalWrite(13, HIGH);
+//  }else{
+//  //delay(1000);
+//    digitalWrite(13, LOW);
+//  }
 }
