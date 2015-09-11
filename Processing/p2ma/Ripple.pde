@@ -52,19 +52,19 @@ public class Ripple {
     // Step the ripple animation by one frame.
     public void update() {
 
+        // If the current number of rings reaches limit or
+        // the age of the oldest ring reaches limit, remove
+        // the oldest ring.
+        if ((currentNumOfRings > MAX_CURRENT_NUM_OF_RINGS) ||
+            ((currentNumOfRings > 0) && (ringAges[0] == MAX_RING_AGE))) {
+
+            removeOldestRing();
+        }
+
         // If the limit of total number of rings has not been
         // reached and it is time to spawn a ring, do it.
         if ((totalNumOfRings < MAX_TOTAL_NUM_OF_RINGS) &&
             (rippleAge % RING_SPAWN_INTERVAL) == 0) {
-
-            // If the current number of rings reaches limit or
-            // the age of the oldest ring reaches limit, remove
-            // the oldest ring.
-            if ((currentNumOfRings == MAX_CURRENT_NUM_OF_RINGS) ||
-                (ringAges[0] == MAX_RING_AGE)) {
-
-                removeOldestRing();
-            }
 
             spawnRing();
         }
@@ -99,6 +99,10 @@ public class Ripple {
             float ringStrokeAlpha =
                 (1.0 - (float) ringAges[i] / MAX_RING_AGE) * 255.0;
 
+            // The ring gradually grows thinner as it ages.
+            int strokeWeight = computeStrokeWeight(ringAges[i]);
+
+            pg.strokeWeight(strokeWeight);
             pg.stroke(RIPPLE_STROKE_GRAYSCALE, ringStrokeAlpha);
             pg.ellipse(center.x, center.y, radius, radius);
         }
@@ -142,6 +146,14 @@ public class Ripple {
         --currentNumOfRings;
     }
 
+    // Compute the stroke weight of a ring based on its age.
+    // The older a ring is, the thinner its stroke should be.
+    private int computeStrokeWeight(float ringAge) {
+
+        return (int) (pow(1.0 - (float) ringAge / MAX_RING_AGE, 4) *
+                MAX_RING_STROKE_WEIGHT);
+    }
+
     // //////// Member variales. ////////
 
     // Center of the ripple.
@@ -182,4 +194,5 @@ public class Ripple {
     private static final float RIPPLE_STROKE_GRAYSCALE = 255.0;
     public static final float RIPPLE_FILL_GRAYSCALE = 0.0;
     public static final float RIPPLE_FILL_ALPHA = 0.0;
+    public static final float MAX_RING_STROKE_WEIGHT = 4.0;
 }
