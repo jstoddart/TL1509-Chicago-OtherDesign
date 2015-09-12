@@ -20,8 +20,9 @@ void setup()
   // Open whatever port is the one you're using.
   String portName = Serial.list()[0];
   myPort = new Serial(this, portName, 9600);
+  delay(3000);
 }
-
+int countdown = 10;
 void draw() {
 //  background(255);
 //  if (mouseOverRect() == true) {  // If mouse is over square,
@@ -36,21 +37,26 @@ void draw() {
 //  }
 //  rect(50, 50, 100, 100);         // Draw a square
 
-  while (myPort.available() > 0) {
-    println(myPort.read());
-  }
+//  while (myPort.available() > 0) {
+//    println(myPort.read());
+//  }
 
   short[] signals = new short[2];
   signals[0] = 123;
   signals[1] = 456;
 
+  if (countdown > 0) {
   for (int i = 0; i < signals.length; ++i) {
+//      println(signals[i]);
       short signal = signals[i];
-      myPort.write(signal & 0xFF);
-      myPort.write((signal & 0xFF00) >> 8); 
+      myPort.write((byte)(signal & 0xFF));
+//      delay(100);
+      myPort.write((byte)((signal & 0xFF00) >> 8)); 
+//      delay(10);
 //      delay(1000);
 //      myPort.write(1); 
-      delay(100);
   }
-  delay(1000);
+//    --countdown;
+  }
+//  delay(1000);
 }

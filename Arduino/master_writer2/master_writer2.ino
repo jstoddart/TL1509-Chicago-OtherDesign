@@ -79,15 +79,16 @@ void loop()
 }
 
 #define N_TANKS 2
+#define START_MARKER 0xFFEE
 
 int signalIndex = 0;
 unsigned short signals[N_TANKS];
 
 void handleSignal(unsigned short signal) {
-
+  
   storeSignal(signal);
-  Serial.print(signal);
-  Serial.print('o');
+//  Serial.print(signal);
+//  Serial.print('o');
 
   if (signalIndex == N_TANKS) {
     fireSignals();
@@ -114,16 +115,16 @@ void fireSignals() {
     Wire.endTransmission();    // stop transmitting
 
     // A quick blink for each signal.
-    digitalWrite(13, HIGH);
-    delay(200);
-    digitalWrite(13, LOW);
-    delay(200);
+//    digitalWrite(13, HIGH);
+//    delay(200);
+//    digitalWrite(13, LOW);
+//    delay(200);
   }
   
-  // A longer lighting after all signals were sent.
-  digitalWrite(13, HIGH);
-  delay(1000);
-  digitalWrite(13, LOW);
-  delay(1000);
+//  // A longer lighting after all signals were sent.
+//  digitalWrite(13, HIGH);
+//  delay(1000);
+//  digitalWrite(13, LOW);
+//  delay(1000);
 }
 
