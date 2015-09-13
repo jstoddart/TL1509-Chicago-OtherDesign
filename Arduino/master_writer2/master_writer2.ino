@@ -1,63 +1,47 @@
-// Wire Master Writer
-// by Nicholas Zambetti <http://www.zambetti.com>
-
-// Demonstrates use of the Wire library
-// Writes data to an I2C/TWI slave device
-// Refer to the "Wire Slave Receiver" example for use with this
-
-// Created 29 March 2006
-
-// This example code is in the public domain.
+// ///////////////////////////////////////////////
+//
+// Master dispatcher. | The Living | 2015
+//
+// ///////////////////////////////////////////////
 
 
 #include <Wire.h>
 
-void setup()
-{
-  Wire.begin(); // join i2c bus (address optional for master)
+#define N_TANKS 2
+
+int signalIndex = 0;
+unsigned short signals[N_TANKS];
+
+void setup() {
+
+  Wire.begin(); // Join i2c bus (address optional for master).
   pinMode(13, OUTPUT);
   Serial.begin(9600);
 }
 
-//byte x = 0;
-
 byte gotLowerByte = 0;
 byte lowerByte = 0;
 
-void loop()
-{
-  //  for (int i = 0; i < 2; i++){
-  //    Wire.beginTransmission(8+i); // transmit to device #4
-  //    Wire.write(0);              // sends one byte
-  //    Wire.endTransmission();    // stop transmitting
-  //    digitalWrite(13, HIGH);
-  //    delay(500);
-  //    Wire.beginTransmission(8+i); // transmit to device #4
-  //    Wire.write(1);              // sends one byte
-  //    Wire.endTransmission();    // stop transmitting
-  //    digitalWrite(13, LOW);
-  //    delay(500);
-  //  }
+void loop() {
 
-  //  if (Serial.available() > 0) {
-  //
-  //    int i = Serial.read();
-  //    Serial.print(i);
-  //
-  //    Wire.beginTransmission(i+8); // transmit to device #4
-  //    Wire.write(0);              // sends one byte
-  //    Wire.endTransmission();    // stop transmitting
-  //    digitalWrite(13, HIGH);
-  //    delay(500);
-  //    Wire.beginTransmission(i+8); // transmit to device #4
-  //    Wire.write(1);              // sends one byte
-  //    Wire.endTransmission();    // stop transmitting
-  //    digitalWrite(13, LOW);
-  //    delay(500);
-  //  }
+  requestSensorData();
 
-  //  x++;
-  //delay(1000);
+  sendSensorData();
+
+  handleSignals();
+}
+
+void requestSensorData() {
+
+  // TODO
+}
+
+void sendSensorData() {
+
+  // TODO
+}
+
+void handleSignals() {
 
   if (Serial.available() > 0) {
 
@@ -68,6 +52,8 @@ void loop()
       gotLowerByte = 0;
       byte higherByte = data;
       unsigned short signal = higherByte << 8 | lowerByte;
+
+      // Handle signal when it is completed received.
       handleSignal(signal);
 
     } else {
@@ -78,17 +64,9 @@ void loop()
   }
 }
 
-#define N_TANKS 2
-#define START_MARKER 0xFFEE
-
-int signalIndex = 0;
-unsigned short signals[N_TANKS];
-
 void handleSignal(unsigned short signal) {
   
   storeSignal(signal);
-//  Serial.print(signal);
-//  Serial.print('o');
 
   if (signalIndex == N_TANKS) {
     fireSignals();
@@ -112,19 +90,6 @@ void fireSignals() {
     byte higherByte = (signal & 0xFF00) >> 8;
     Wire.write(lowerByte);
     Wire.write(higherByte);
-    Wire.endTransmission();    // stop transmitting
-
-    // A quick blink for each signal.
-//    digitalWrite(13, HIGH);
-//    delay(200);
-//    digitalWrite(13, LOW);
-//    delay(200);
+    Wire.endTransmission();
   }
-  
-//  // A longer lighting after all signals were sent.
-//  digitalWrite(13, HIGH);
-//  delay(1000);
-//  digitalWrite(13, LOW);
-//  delay(1000);
 }
-
