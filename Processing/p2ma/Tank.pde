@@ -49,6 +49,18 @@ public class Tank {
         return position.y;
     }
 
+    // Get the center coordinates of the tank.
+    public PVector getCenter() {
+
+        float topX = position.x;
+        float topY = position.y;
+        float sizeX = size.x;
+        float sizeY = size.y;
+
+        PVector center = new PVector(topX + sizeX * 0.5, topY + sizeY * 0.5);
+        return center;
+    }
+
     // Update the bubbles in the tank.
     public void update() {
 
