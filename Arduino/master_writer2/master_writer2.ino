@@ -23,7 +23,7 @@
 // Stores signals received from Raspberry Pi to send to slaves.
 unsigned short signals[N_TANKS];
 // Sensor readings retrieved from slaves.
-unsigned short readings[N_TANKS];
+byte readings[N_TANKS];
 
 // //////// Initialization. ////////
 
@@ -62,7 +62,7 @@ void requestSensorReadings() {
     Wire.requestFrom(device, 1);
 
     // Debugging message delimiter (111) to be displayed on Pi.
-    Serial.print('o');
+//    Serial.print('o');
 
     if(Wire.available()) {
 
@@ -70,14 +70,16 @@ void requestSensorReadings() {
       readings[tank] = Wire.read(); 
 
       // Write back to Pi for debugging.
-      Serial.write(readings[tank]);
+//      Serial.write(readings[tank]);
     }
   }
 }
 
 void sendSensorData() {
 
-  // TODO
+  for (int tank = 0; tank < N_TANKS; ++tank) {
+    Serial.write(readings[tank]);
+  }
 }
 
 void handleSignals() {
@@ -107,7 +109,7 @@ void handleSignals() {
         unsigned short signal = higherByte << 8 | lowerByte;
 
         // Write the signal back to Pi for debugging.
-        Serial.write(signal);
+//        Serial.write(signal);
 
         // Store the signal and increment the index.
         signals[signalIndex] = signal;
