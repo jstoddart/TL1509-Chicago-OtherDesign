@@ -51,4 +51,8 @@ void draw() {
     // Increment the signal to make it a counter.
     ++signals[i];
   }
+  
+  while (masterPort.available() > 0) {
+    println(masterPort.read());
+  }
 }

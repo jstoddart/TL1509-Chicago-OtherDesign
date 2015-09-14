@@ -1,39 +1,76 @@
-// ///////////////////////////////////////////////
+// /////////////////////////////////////
 //
-// Master dispatcher. | The Living | 2015
+// Master Dispatcher | The Living | 2015
 //
-// ///////////////////////////////////////////////
+// /////////////////////////////////////
 
 
 #include <Wire.h>
 
-#define N_TANKS 2
+// //////// Constants. ////////
 
-int signalIndex = 0;
+// The number of tanks in the system.
+#define N_TANKS 22
+// The start of the slaves' sequential I2C addresses.
+#define SLAVE_ADDRESS_START 19
+// A trigger signal that makes master Arduino to request sensor data from slaves.
+#define TRIGGER_SIGNAL_REQUEST_SENSOR_DATA 42
+
+// //////// Global varaibles. ////////
+
+// Stores signals received from Raspberry Pi to send to slaves.
 unsigned short signals[N_TANKS];
+// Sensor readings retrieved from slaves.
+unsigned short readings[N_TANKS];
+
+// //////// Initialization. ////////
 
 void setup() {
 
   Wire.begin(); // Join i2c bus (address optional for master).
-  pinMode(13, OUTPUT);
   Serial.begin(9600);
 }
 
-byte gotLowerByte = 0;
-byte lowerByte = 0;
+// //////// Main loop. ////////
 
 void loop() {
 
-  requestSensorData();
+  // Request sensor readings from individual slaves.
+  requestSensorReadings();
 
+  // Communicate the sensor readings back to Raspberry Pi
+  // so the latter could generate signals for slaves to act on.
   sendSensorData();
 
+  // Dispatch the signals received from Raspberry Pi to slaves
+  // for the to execute.
   handleSignals();
+
+  // Wait for a trigger signal from Pi to continue requesting
+  // sensor readings.
+  waitToRequestSensorReadings();
 }
 
-void requestSensorData() {
+void requestSensorReadings() {
 
-  // TODO
+  for (int tank = 0; tank < N_TANKS; ++tank) {
+
+    // Request a 1-byte sensor reading from the tank.
+    int device = getDevice(tank);
+    Wire.requestFrom(device, 1);
+
+    // Debugging message delimiter (111) to be displayed on Pi.
+    Serial.print('o');
+
+    if(Wire.available()) {
+
+      // Store the sensor reading into the corresponding entry.
+      readings[tank] = Wire.read(); 
+
+      // Write back to Pi for debugging.
+      Serial.write(readings[tank]);
+    }
+  }
 }
 
 void sendSensorData() {
@@ -43,53 +80,90 @@ void sendSensorData() {
 
 void handleSignals() {
 
-  if (Serial.available() > 0) {
+  // 0 if we are expecting the lower byte of a signal. 1 otherwise.
+  byte gotLowerByte = 0;
+  // The lower byte of the current signal being received.
+  byte lowerByte = 0;
+  // Index of the next entry to store the signal to.
+  int signalIndex = 0;
 
-    byte data = Serial.read();
+  // Collect signals from  Pi for all tank.
+  while (signalIndex < N_TANKS) {
 
-    if (gotLowerByte) {
+    if (Serial.available() > 0) {
 
-      gotLowerByte = 0;
-      byte higherByte = data;
-      unsigned short signal = higherByte << 8 | lowerByte;
+      // Read data from Pi.
+      byte data = Serial.read();
 
-      // Handle signal when it is completed received.
-      handleSignal(signal);
+      if (gotLowerByte) {    // This is the higher byte of the signal.
 
-    } else {
+        // Next time we'll be expecting a lower byte.
+        gotLowerByte = 0;
 
-      gotLowerByte = 1;
-      lowerByte = data;
+        // Assemble the signal from the two bytes.
+        byte higherByte = data;
+        unsigned short signal = higherByte << 8 | lowerByte;
+
+        // Write the signal back to Pi for debugging.
+        Serial.write(signal);
+
+        // Store the signal and increment the index.
+        signals[signalIndex] = signal;
+        ++signalIndex;
+
+      } else {    // This is the lower byte of the signal.
+
+        // Now we got the lower byte, store it for assembling a signal later.
+        gotLowerByte = 1;
+        lowerByte = data;
+      }
+    }
+  }
+
+  // After receiving all the signals, fire them to corresponding tanks.
+  fireSignals();
+
+  // Debugging message delimiter (112) to be displayed on Pi.
+  Serial.write('p');
+}
+
+void waitToRequestSensorReadings() {
+
+  // Block until the Pi sends a trigger signal to continue requesting
+  // sensor readings.
+  while(1) {
+    if (Serial.available() > 0) {
+      byte data = Serial.read();
+      if (data == TRIGGER_SIGNAL_REQUEST_SENSOR_DATA) break;
     }
   }
 }
 
-void handleSignal(unsigned short signal) {
-  
-  storeSignal(signal);
-
-  if (signalIndex == N_TANKS) {
-    fireSignals();
-    signalIndex = 0;
-  }
-}
-
-void storeSignal(unsigned short signal) {
-  signals[signalIndex] = signal;
-  ++signalIndex;
-}
+// //////// Utility functions. ////////
 
 void fireSignals() {
 
   for (int tank = 0; tank < N_TANKS; ++tank) {
-    
+
+    // Get the device address from tank number.
+    int device = getDevice(tank);
+
+    Wire.beginTransmission(device);
+
+    // Break down the signal into two bytes and send them.
     unsigned short signal = signals[tank];
-    int deviceId = tank + 8;
-    Wire.beginTransmission(deviceId);
-    byte lowerByte = signal & 0xFF;
-    byte higherByte = (signal & 0xFF00) >> 8;
-    Wire.write(lowerByte);
-    Wire.write(higherByte);
+    byte loByte = signal & 0xFF;
+    byte hiByte = (signal & 0xFF00) >> 8;
+    Wire.write(loByte);
+    Wire.write(hiByte);
+    
     Wire.endTransmission();
   }
+}
+
+int getDevice(int tank) {
+
+  // The I2C addresses of the slaves are arranged sequentially starting from
+  // `SLAVE_ADDRESS_START`.
+  return tank + SLAVE_ADDRESS_START;
 }
