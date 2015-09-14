@@ -15,6 +15,8 @@
 #define SLAVE_ADDRESS_START 19
 // A trigger signal that makes master Arduino to request sensor data from slaves.
 #define TRIGGER_SIGNAL_REQUEST_SENSOR_DATA 42
+// Time to keep nozzles on (in milliseconds).
+#define NOZZLE_DELAY 200
 
 // //////// Global varaibles. ////////
 
@@ -157,6 +159,27 @@ void fireSignals() {
     Wire.write(loByte);
     Wire.write(hiByte);
     
+    Wire.endTransmission();
+  }
+
+  // Keep the nozzles on for a little while.
+  delay(NOZZLE_DELAY);
+
+  // Turn off all nozzles.
+  for (int tank = 0; tank < N_TANKS; ++tank) {
+
+    // Get the device address from tank number.
+    int device = getDevice(tank);
+
+    Wire.beginTransmission(device);
+
+    // Break down the signal into two bytes and send them.
+    unsigned short signal = 0;
+    byte loByte = signal & 0xFF;
+    byte hiByte = (signal & 0xFF00) >> 8;
+    Wire.write(loByte);
+    Wire.write(hiByte);
+
     Wire.endTransmission();
   }
 }
