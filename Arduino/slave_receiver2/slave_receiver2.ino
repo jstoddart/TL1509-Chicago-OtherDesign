@@ -10,21 +10,24 @@
 
 // I2C address of this slave Arduino.
 #define SLAVE_ADDRESS 22
-
 // Latch pin indicates when shift register should start/stop listening.
 // The wire is green.
 #define LATCH_PIN 4
-
 // Clock pin indicates which output pin to associate data with.
 // The wire is blue.
 #define CLOCK_PIN 8
-
 // Data pin transfers binary data. The wire is yellow.
 #define DATA_PIN 7
+// Pins for IR sensor.
+#define IR_LEFT_PIN 2
+#define IR_RIGHT_PIN 3
+// Pin for built-in LED.
+#define LED_PIN 13
 
 // //////// Global variables. ////////
 
-byte sensorReading;
+// IR sensor reading.
+byte irSensorReading = 0;
 
 // //////// Initialization. ////////
 
@@ -40,21 +43,28 @@ void setup() {
   // Start serial.
   Serial.begin(9600);
 
-  // Initialize the nozzle controllers.
   initializeNozzles();
+  initializeSensor();
+
+  pinMode(LED_PIN, OUTPUT);
 }
 
 void initializeNozzles() {
 
-  //Setup latch pin for Shift-Register
   pinMode(LATCH_PIN, OUTPUT);
+}
+
+void initializeSensor() {
+
+  pinMode(IR_LEFT_PIN, INPUT);
+  pinMode(IR_RIGHT_PIN, INPUT);
 }
 
 // //////// Main loop. ////////
 
 void loop() {
 
-  // Nothing to do here.
+  readIrSensor();
 }
 
 // //////// Event handlers. ////////
@@ -82,11 +92,13 @@ void requestEvent() {
   // Print debug message.
   Serial.print("request event triggered. ");
 
-  // Alternating 0 and 1 as dummy sensor readings.
-  sensorReading = (sensorReading + 1) % 2;
+  // Write the IR sensor reading back to master via I2C.
+  Wire.write(irSensorReading);
 
-  // Write the sensor reading back to master via I2C.
-  Wire.write(sensorReading);
+  // Reset sensor reading so that the next trigger could be detected.
+  irSensorReading = 0;
+  // For debugging, turn off LED.
+  digitalWrite(LED_PIN, 0);
 }
 
 // //////// Nozzle control. ////////
@@ -130,4 +142,20 @@ void fireNozzles(short signal) {
   shiftOut(hiByte);
   shiftOut(loByte);
   digitalWrite(LATCH_PIN, 1);
+}
+
+// //////// Sensor reading. ////////
+
+void readIrSensor() {
+
+  // Get the latest reading from the IR sensor.
+  int currentSensorReading =
+    digitalRead(IR_LEFT_PIN) | digitalRead(IR_RIGHT_PIN);
+
+  // If the sensor is blocked, update the reading.
+  if (currentSensorReading) {
+    irSensorReading = 1;
+    // For debugging, also lit up the LED.
+    digitalWrite(LED_PIN, 1);
+  }
 }
