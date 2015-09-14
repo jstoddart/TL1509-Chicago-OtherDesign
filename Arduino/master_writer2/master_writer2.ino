@@ -70,7 +70,7 @@ void requestSensorReadings() {
       readings[tank] = Wire.read(); 
 
       // Write back to Pi for debugging.
-//      Serial.write(readings[tank]);
+      // Serial.write(readings[tank]);
     }
   }
 }
@@ -109,7 +109,7 @@ void handleSignals() {
         unsigned short signal = higherByte << 8 | lowerByte;
 
         // Write the signal back to Pi for debugging.
-//        Serial.write(signal);
+        // Serial.write(signal);
 
         // Store the signal and increment the index.
         signals[signalIndex] = signal;
@@ -128,7 +128,7 @@ void handleSignals() {
   fireSignals();
 
   // Debugging message delimiter (112) to be displayed on Pi.
-  Serial.write('p');
+  // Serial.write('p');
 }
 
 void waitToRequestSensorReadings() {
