@@ -10,24 +10,42 @@
 
 // I2C address of this slave Arduino.
 #define SLAVE_ADDRESS 22
+
+// //// Pins. ////
+
 // Latch pin indicates when shift register should start/stop listening.
 // The wire is green.
-#define LATCH_PIN 4
+#define LATCH_PIN 6
 // Clock pin indicates which output pin to associate data with.
 // The wire is blue.
 #define CLOCK_PIN 8
 // Data pin transfers binary data. The wire is yellow.
 #define DATA_PIN 7
+
 // Pins for IR sensor.
 #define IR_LEFT_PIN 2
 #define IR_RIGHT_PIN 3
+
+// Pins for ultrasonic sensor.
+#define ULTRASONIC_TRIGGER_PIN 4
+#define ULTRASONIC_ECHO_PIN 5
+
 // Pin for built-in LED.
 #define LED_PIN 13
+
+// Ultrasonic sensor constants.
+#define ULTRASONIC_MIN_DIST 10
+#define ULTRASONIC_MAX_DIST 150
+#define ULTRASONIC_DELAY 60
 
 // //////// Global variables. ////////
 
 // IR sensor reading.
 byte irSensorReading = 0;
+// Ultrasonic sensor reading.
+byte usSensorReading = 0;
+// Shadow pattern to render when ultrasonic sensor has a valid reading.
+unsigned short shadowSignal = 0b0101010101010101;
 
 // //////// Initialization. ////////
 
@@ -58,13 +76,34 @@ void initializeSensor() {
 
   pinMode(IR_LEFT_PIN, INPUT);
   pinMode(IR_RIGHT_PIN, INPUT);
+
+  pinMode(ULTRASONIC_TRIGGER_PIN, OUTPUT);
+  pinMode(ULTRASONIC_ECHO_PIN, INPUT);
 }
 
 // //////// Main loop. ////////
 
 void loop() {
 
+  // Update sensor readings.
   readIrSensor();
+  readUsSensor();
+
+  if (usSensorReading) {
+
+    // Create a vibrating shadow pattern if the ultrasonic sensor
+    // reading is within range.
+    fireNozzles(shadowSignal);
+    // Shake the shadow!
+    shadowSignal = (shadowSignal << 1) | (shadowSignal >> 15 && 1);
+
+  } else {
+
+    // If there is no valid ultrasonic reading, remove the shadow.
+    fireNozzles(0);
+  }
+  // Delay so that this slave is able to pick up events.
+  delay(ULTRASONIC_DELAY);
 }
 
 // //////// Event handlers. ////////
@@ -79,13 +118,19 @@ void receiveEvent(int bytes) {
     byte hiByte = Wire.read();
     unsigned short signal = (hiByte << 8) | loByte;
 
-    // Print the signal to serial for debugging.
+    // //// DEBUG ////
     Serial.print("[SIGNAL FROM MASTER] ");
     Serial.print(hiByte, BIN);
     Serial.print("-");
     Serial.print(loByte, BIN);
     Serial.print("-");
     Serial.println(signal, BIN);
+
+    // If the ultrasonic sensor reading is within range,
+    // overlap the shadow signal with the signal from master.
+    if (usSensorReading) {
+      signal |= shadowSignal;
+    }
 
     // Issue the signal to nozzle controllers.
     fireNozzles(signal);
@@ -136,8 +181,6 @@ void shiftOut(byte myDataOut) {
   digitalWrite(CLOCK_PIN, 0);
 }
 
-// //// Firing nozzles with a short integer signal. ////
-
 void fireNozzles(short signal) {
 
   byte loByte = signal & 0xFF;
@@ -153,7 +196,7 @@ void fireNozzles(short signal) {
 
 void readIrSensor() {
 
-//  Serial.println("[IR SENSOR]");
+  // //// IR sensor. ////
 
   // Get the latest reading from the IR sensor.
   int currentSensorReading =
@@ -166,3 +209,54 @@ void readIrSensor() {
     digitalWrite(LED_PIN, 1);
   }
 }
+
+int readUsSensor() {
+
+  // //// Ultrasonic sensor. ////
+
+  long duration, distanceInCm;
+
+  // Pulse the trigger pin and measure the response time on the echo pin.
+  // Pulse `LOW` first to ensure clean signal.
+  digitalWrite(ULTRASONIC_TRIGGER_PIN, LOW);
+  delayMicroseconds(1);
+
+  digitalWrite(ULTRASONIC_TRIGGER_PIN, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(ULTRASONIC_ECHO_PIN, LOW);
+
+  // Measure echo time.
+  duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH);
+
+  // Convert echo time to distance.
+  distanceInCm = msToCm(duration);
+
+  // Debugging messages.
+  Serial.print("[ULTRASONIC] ");
+  Serial.println(distanceInCm);
+
+  // Mark the ultrasensor reading if the distance is
+  // within specified range.
+  if (distanceInCm >= ULTRASONIC_MIN_DIST &&
+      distanceInCm <= ULTRASONIC_MAX_DIST) {
+
+    usSensorReading = 1;
+
+  } else {
+
+    usSensorReading = 0;
+  }
+}
+
+// //////// Utilities. ////////
+
+long msToCm(long microseconds) {
+
+  // Speed of sound
+  // = 340.29 m/s = 3.4029e-4 m/us
+  // = 3.4029e-2 m/us
+
+  // Time includes round trip travel.
+  return microseconds * 0.5 * 3.4029e-2;
+}
+
