@@ -205,6 +205,7 @@ public class BubbleRenderer {
 
                     signal <<= 1;
                 }
+                signal >>= 1;
 
                 signals[frame][tank] = signal;
             }
