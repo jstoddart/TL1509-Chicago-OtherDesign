@@ -181,7 +181,7 @@ public class Ripple {
     // Number of frames between spawning two adjacent rings.
     private static final int RING_SPAWN_INTERVAL = 2;
     // Maximum number of frames a ring can exist for.
-    private static final int MAX_RING_AGE = 18;
+    private static final int MAX_RING_AGE = 16;
     // Maximum number of rings ever spawned for a ripple.
     private static final int MAX_TOTAL_NUM_OF_RINGS = 4;
     // Maximum number of rings currently in a ripple.
