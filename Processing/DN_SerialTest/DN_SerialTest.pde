@@ -1,56 +1,58 @@
-/**
- * Simple Write. 
- * 
- * Check if the mouse is over a rectangle and writes the status to the serial port. 
- * This example works with the Wiring / Arduino program that follows below.
- */
-
+// ///////////////////////////////////////////////
+//
+// p2ma (Pi To Master Arduino) | The Living | 2015
+//
+// ///////////////////////////////////////////////
 
 import processing.serial.*;
 
-Serial myPort;  // Create object from Serial class
-int val;        // Data received from the serial port
+final int N_SLAVES = 2;
 
-void setup() 
-{
-  size(200, 200);
-  // I know that the first port in the serial list on my mac
-  // is always my  FTDI adaptor, so I open Serial.list()[0].
-  // On Windows machines, this generally opens COM1.
-  // Open whatever port is the one you're using.
+// Serial port connecting master Arduino.
+Serial masterPort;
+
+// The signal arrays to distribute to slave Arduinos.
+short[] signals;
+
+void setup() {
+
+  // Initialize the signal arrays to distribute to slave Arduinos.
+  signals = new short[N_SLAVES];
+
+  // Set up serial port.
   String portName = Serial.list()[0];
-  myPort = new Serial(this, portName, 9600);
+  masterPort = new Serial(this, portName, 9600);
+
+  // The delay is necessary to avoid losing data at the beginning
+  // of transmission.
+  delay(3000);
+}
+
+void settings() {
+
+  // We don't really need this window.
+  size(200, 200);
 }
 
 void draw() {
-//  background(255);
-//  if (mouseOverRect() == true) {  // If mouse is over square,
-//    fill(204);                    // change color and
-//    myPort.write("0");              // send an H to indicate mouse is over square
-//    println("0");
-//  } 
-//  else {                        // If mouse is not over square,
-//    fill(0);                      // change color and
-//    myPort.write("1");              // send an L otherwise
-//    println("1");
-//  }
-//  rect(50, 50, 100, 100);         // Draw a square
-
-  while (myPort.available() > 0) {
-    println(myPort.read());
-  }
-
-  short[] signals = new short[2];
-  signals[0] = 123;
-  signals[1] = 456;
 
   for (int i = 0; i < signals.length; ++i) {
-      short signal = signals[i];
-      myPort.write(signal & 0xFF);
-      myPort.write((signal & 0xFF00) >> 8); 
-//      delay(1000);
-//      myPort.write(1); 
-      delay(100);
+
+    short signal = signals[i];
+    
+    // Delay so the LED pattern is visible.
+    delay(300);
+
+    // Write the low and high byte of each short-integer signal
+    // to master port.
+    masterPort.write((byte)(signal & 0xFF));
+    masterPort.write((byte)((signal & 0xFF00) >> 8));
+    
+    // Increment the signal to make it a counter.
+    ++signals[i];
   }
-  delay(1000);
+  
+  while (masterPort.available() > 0) {
+    println(masterPort.read());
+  }
 }
