@@ -20,7 +20,7 @@
 // that are fully contained in this slave Arduino.
 
 // 1 to use random pattern. 0 to not use it.
-#define USE_RANDOM_PATTERN 1
+#define USE_RANDOM_PATTERN 0
 // The probability that a single nozzle is turned on.
 #define TRIGGER_POSSIBILITY 0.8
 // The time (in milliseconds) that a random pattern will persist.
