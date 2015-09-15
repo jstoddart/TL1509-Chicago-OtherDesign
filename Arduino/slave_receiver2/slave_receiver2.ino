@@ -11,6 +11,21 @@
 // I2C address of this slave Arduino.
 #define SLAVE_ADDRESS 22
 
+// Number of nozzles.
+#define N_NOZZLES 10
+
+// //// Backup pattern. ////
+
+// In case sensor-based patterns do not work, use random patterns
+// that are fully contained in this slave Arduino.
+
+// 1 to use random pattern. 0 to not use it.
+#define USE_RANDOM_PATTERN 1
+// The probability that a single nozzle is turned on.
+#define TRIGGER_POSSIBILITY 0.8
+// The time (in milliseconds) that a random pattern will persist.
+#define RANDOM_PATTERN_DELAY 200
+
 // //// Pins. ////
 
 // Latch pin indicates when shift register should start/stop listening.
@@ -33,7 +48,8 @@
 // Pin for built-in LED.
 #define LED_PIN 13
 
-// Ultrasonic sensor constants.
+// //// Ultrasonic sensor constants. ////
+
 #define ULTRASONIC_MIN_DIST 10
 #define ULTRASONIC_MAX_DIST 150
 #define ULTRASONIC_DELAY 60
@@ -46,6 +62,8 @@ byte irSensorReading = 0;
 byte usSensorReading = 0;
 // Shadow pattern to render when ultrasonic sensor has a valid reading.
 unsigned short shadowSignal = 0b0101010101010101;
+// Frames remaining before the next random pattern update.
+int randomPatternUpdateCountdown = 0;
 
 // //////// Initialization. ////////
 
@@ -54,9 +72,13 @@ void setup() {
   // Join I2C bus.
   Wire.begin(SLAVE_ADDRESS);
 
+#if not USE_RANDOM_PATTERN
+
   // Register event handlers for I2C communications.
   Wire.onReceive(receiveEvent);
   Wire.onRequest(requestEvent);
+
+#endif
 
   // Start serial.
   Serial.begin(9600);
@@ -85,6 +107,20 @@ void initializeSensor() {
 
 void loop() {
 
+#if USE_RANDOM_PATTERN
+
+  short signal = 0;
+  for (int i = 0; i < N_NOZZLES; ++i) {
+    float r = rand() / (float) RAND_MAX;
+    if (r < TRIGGER_POSSIBILITY) signal |= 1;
+    signal <<= 1;
+  }
+  signal >>= 1;
+  fireNozzles(signal);
+  delay(RANDOM_PATTERN_DELAY);
+
+#else
+
   // Update sensor readings.
   readIrSensor();
   readUsSensor();
@@ -104,6 +140,8 @@ void loop() {
   }
   // Delay so that this slave is able to pick up events.
   delay(ULTRASONIC_DELAY);
+
+#endif
 }
 
 // //////// Event handlers. ////////
