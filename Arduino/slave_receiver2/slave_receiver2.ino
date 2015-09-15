@@ -22,7 +22,7 @@
 // 1 to use random pattern. 0 to not use it.
 #define USE_RANDOM_PATTERN 0
 // The probability that a single nozzle is turned on.
-#define TRIGGER_POSSIBILITY 0.8
+#define TRIGGER_PROBABILITY 0.8
 // The time (in milliseconds) that a random pattern will persist.
 #define RANDOM_PATTERN_DELAY 200
 
@@ -111,10 +111,13 @@ void loop() {
 
   short signal = 0;
   for (int i = 0; i < N_NOZZLES; ++i) {
+    // Turn on the nozzle at a probability of
+    // `TRIGGER_PROBABILITY`.
     float r = rand() / (float) RAND_MAX;
-    if (r < TRIGGER_POSSIBILITY) signal |= 1;
+    if (r < TRIGGER_PROBABILITY) signal |= 1;
     signal <<= 1;
   }
+
   signal >>= 1;
   fireNozzles(signal);
   delay(RANDOM_PATTERN_DELAY);
