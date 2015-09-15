@@ -75,12 +75,17 @@ void receiveEvent(int bytes) {
   if (Wire.available() >= 2) {
 
     // Assemble the signal.
-    byte lowerByte = Wire.read();
-    byte higherByte = Wire.read();
-    short signal = (higherByte << 8) | lowerByte;
+    byte loByte = Wire.read();
+    byte hiByte = Wire.read();
+    unsigned short signal = (hiByte << 8) | loByte;
 
     // Print the signal to serial for debugging.
-    Serial.print(signal);
+    Serial.print("[SIGNAL FROM MASTER] ");
+    Serial.print(hiByte, BIN);
+    Serial.print("-");
+    Serial.print(loByte, BIN);
+    Serial.print("-");
+    Serial.println(signal, BIN);
 
     // Issue the signal to nozzle controllers.
     fireNozzles(signal);
@@ -90,7 +95,7 @@ void receiveEvent(int bytes) {
 void requestEvent() {
 
   // Print debug message.
-  Serial.print("request event triggered. ");
+  Serial.println("[REQUEST]");
 
   // Write the IR sensor reading back to master via I2C.
   Wire.write(irSensorReading);
@@ -147,6 +152,8 @@ void fireNozzles(short signal) {
 // //////// Sensor reading. ////////
 
 void readIrSensor() {
+
+//  Serial.println("[IR SENSOR]");
 
   // Get the latest reading from the IR sensor.
   int currentSensorReading =
