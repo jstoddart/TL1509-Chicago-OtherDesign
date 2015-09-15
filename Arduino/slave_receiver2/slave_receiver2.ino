@@ -154,14 +154,19 @@ void receiveEvent(int bytes) {
     // Assemble the signal.
     byte loByte = Wire.read();
     byte hiByte = Wire.read();
-    unsigned short signal = (hiByte << 8) | loByte;
+    // A temporary fix of flipping bytes:
+    // The high byte should never exceed 11b. So we switch the bytes
+    // in case this happens. Since it is just two bits, error should be
+    // tolerable.
+    unsigned short signal =
+      (hiByte > 0b11) ? ((loByte << 8) | hiByte): ((hiByte << 8) | loByte);
 
     // //// DEBUG ////
-    Serial.print("[SIGNAL FROM MASTER] ");
+    Serial.print("[SIGNAL FROM MASTER] hi=");
     Serial.print(hiByte, BIN);
-    Serial.print("-");
+    Serial.print(" lo=");
     Serial.print(loByte, BIN);
-    Serial.print("-");
+    Serial.print(" word=");
     Serial.println(signal, BIN);
 
     // If the ultrasonic sensor reading is within range,
@@ -270,8 +275,8 @@ int readUsSensor() {
   distanceInCm = msToCm(duration);
 
   // Debugging messages.
-  Serial.print("[ULTRASONIC] ");
-  Serial.println(distanceInCm);
+//  Serial.print("[ULTRASONIC] ");
+//  Serial.println(distanceInCm);
 
   // Mark the ultrasensor reading if the distance is
   // within specified range.
