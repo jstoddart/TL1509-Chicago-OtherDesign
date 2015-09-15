@@ -60,8 +60,6 @@ final int INITIAL_DELAY = 3000;
 // Mandatory delay to make communication work, especially for slave Arduinos to
 // manipulate digital pins.
 final int MANDATORY_DELAY = 0;
-// Delay so the LED pattern is visible.
-final int LED_DELAY = 10;
 // A trigger signal that makes master Arduino to request sensor data from slaves.
 final byte TRIGGER_SIGNAL_REQUEST_SENSOR_DATA = 42;
 
@@ -204,9 +202,8 @@ void updateDevice() {
     // Move on to the next signal frame.
     ++curSignalFrame;
 
-    // Necessary delays.
+    // Necessary delay.
     delay(MANDATORY_DELAY);
-    delay(LED_DELAY);
     
     // Release master to request sensor data.
     masterPort.write(TRIGGER_SIGNAL_REQUEST_SENSOR_DATA);
