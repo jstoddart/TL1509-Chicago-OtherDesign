@@ -68,6 +68,9 @@ final byte TRIGGER_SIGNAL_REQUEST_SENSOR_DATA = 42;
 
 void setup() {
 
+  // Processing 2.x: Set window size here.
+  size(WINDOW_WIDTH, WINDOW_HEIGHT);
+
   surface = new Surface(SURFACE_WIDTH, SURFACE_HEIGHT);
   br = new BubbleRenderer(#000001, false);
   simulator = new Simulator(SIMULATOR_WIDTH, SIMULATOR_HEIGHT);
@@ -83,6 +86,7 @@ void setup() {
   delay(INITIAL_DELAY);
 }
 
+// Processing 3.x: Set window size here.
 void settings() {
 
   size(WINDOW_WIDTH, WINDOW_HEIGHT);
