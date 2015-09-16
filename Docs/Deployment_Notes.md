@@ -71,8 +71,9 @@ the communication behaves weirdly, one place to look at is these delays.
 final int INITIAL_DELAY = 3000;
 ...
 // Mandatory delay to make communication work, especially for slave Arduinos to
-// manipulate digital pins.
-final int MANDATORY_DELAY = 0;
+// manipulate digital pins and the serial communication between Pi and master
+// Arduino.
+final int MANDATORY_DELAY = 100;
 ```
 
 #### 5.2 `master_writer2.ino`
