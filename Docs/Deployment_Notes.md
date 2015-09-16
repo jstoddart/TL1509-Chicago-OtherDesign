@@ -58,7 +58,31 @@ on `Line 12` in `slave_receiver2.ino`, i.e. `SLAVE_ADDRESS`. If you want to
 change this start address, please make sure to change `SLAVE_ADDRESS_START`
 and update each `SLAVE_ADDRESS` and upload the program to slave Arduinos again.
 
-### 4. Backup Plan
+### 5. Delays
+
+Proper delays are crucial (but fragile) to make all these pieces talk. If
+the communication behaves weirdly, one place to look at is these delays.
+
+#### 5.1 `p2ma.pde`
+
+```java
+// The delay is necessary to avoid losing data at the beginning of
+// transmission.
+final int INITIAL_DELAY = 3000;
+...
+// Mandatory delay to make communication work, especially for slave Arduinos to
+// manipulate digital pins.
+final int MANDATORY_DELAY = 0;
+```
+
+#### 5.2 `master_writer2.ino`
+
+```c
+// Time to keep nozzles on (in milliseconds).
+#define NOZZLE_DELAY 200
+```
+
+### 5. Backup Plan
 
 In case bubble pattern generation based on sensor readings does not work
 relieably, we have a backup plan of randomly emitting bubbles. To enable
@@ -67,7 +91,7 @@ in `slave_receiver2.ino` to `1`. The two constants below controls the random
 behavior, i.e. overall bubble density (`TRIGGER_PROBABILITY`) and random
 pattern changing frequency (`RANDOM_PATTERN_DELAY`).
 
-### 5. Debugging
+### 6. Debugging
 
 To generate test signals from Processing, left click on the first part of the
 program window. These signals will be dependent on the sensor readings and be
