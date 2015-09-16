@@ -58,8 +58,9 @@ final int N_SLAVES = 22;
 // The delay is necessary to avoid losing data at the beginning of transmission.
 final int INITIAL_DELAY = 3000;
 // Mandatory delay to make communication work, especially for slave Arduinos to
-// manipulate digital pins.
-final int MANDATORY_DELAY = 0;
+// manipulate digital pins and the serial communication between Pi and master
+// Arduino.
+final int MANDATORY_DELAY = 100;
 // A trigger signal that makes master Arduino to request sensor data from slaves.
 final byte TRIGGER_SIGNAL_REQUEST_SENSOR_DATA = 42;
 
@@ -236,6 +237,8 @@ void sendSignalFrame(short[] signals) {
   for (int i = 0; i < signals.length; ++i) {
 
     short signal = signals[i];
+    // DEBUG
+    // signal = 0x01ff;
 
     // DEBUG: Even if the entry is set to a constant, slave will occasionally get
     // flipped bytes.
