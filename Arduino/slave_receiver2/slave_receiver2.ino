@@ -14,6 +14,13 @@
 // Number of nozzles.
 #define N_NOZZLES 10
 
+// //// Shadow control. ////
+
+// Number of frames between two shadow patterns when ultrasonic reading is nearest.
+#define MIN_SHADOW_FLASH_INTERVAL 1
+// Number of frames between two shadow patterns when ultrasonic reading is farthest.
+#define MAX_SHADOW_FLASH_INTERVAL 8
+
 // //// Backup pattern. ////
 
 // In case sensor-based patterns do not work, use random patterns
@@ -64,6 +71,10 @@ byte usSensorReading = 0;
 unsigned short shadowSignal = 0b0101010101010101;
 // Frames remaining before the next random pattern update.
 int randomPatternUpdateCountdown = 0;
+// The number of frames between two shadow patterns. -1 indicates no shadow.
+int shadowFlashInterval = -1;
+// The number of frames before shadow flashes next time.
+int shadowFlashCountdown = 0;
 
 // //////// Initialization. ////////
 
@@ -132,9 +143,16 @@ void loop() {
 
     // Create a vibrating shadow pattern if the ultrasonic sensor
     // reading is within range.
-    fireNozzles(shadowSignal);
+//    fireNozzles(shadowSignal);
     // Shake the shadow!
-    shadowSignal = (shadowSignal << 1) | (shadowSignal >> 15 && 1);
+    if (shadowFlashCountdown >= 0) {
+      --shadowFlashCountdown;
+    }
+    if (shadowFlashCountdown == 0) {
+      shadowSignal = (shadowSignal << 1) | (shadowSignal >> 15 && 1);
+      // Reset the countdown.
+      shadowFlashCountdown = shadowFlashInterval;
+    }
 
   } else {
 
@@ -290,6 +308,7 @@ int readUsSensor() {
       distanceInCm <= ULTRASONIC_MAX_DIST) {
 
     usSensorReading = 1;
+    shadowFlashInterval = computeShadowFlashInterval(distanceInCm);
 
   } else {
 
@@ -298,6 +317,17 @@ int readUsSensor() {
 }
 
 // //////// Utilities. ////////
+
+int computeShadowFlashInterval(int distance) {
+
+  double normalized =
+    (double) (distance - ULTRASONIC_MIN_DIST) /
+    (ULTRASONIC_MAX_DIST - ULTRASONIC_MIN_DIST);
+
+  return (int) (
+    MIN_SHADOW_FLASH_INTERVAL +
+    (MAX_SHADOW_FLASH_INTERVAL - MIN_SHADOW_FLASH_INTERVAL) * normalized);
+}
 
 long msToCm(long microseconds) {
 
