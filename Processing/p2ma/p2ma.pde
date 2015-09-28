@@ -4,11 +4,21 @@
 //
 // ///////////////////////////////////////////////
 
+// //////// Imports. ////////
+
 import processing.serial.*;
 
+// //////// Modes. ////////
+
+// Use sensor readings to trigger ripple.
 final boolean USE_SENSORS = false;
+// Randomly trigger ripple.
 final boolean USE_RANDOM = true;
+// `True` to use simulator to visualize bubble rendering.
+// `False` to use the physical device.
 final boolean USE_SIMULATOR = true;
+// When the physical device is used, `true` to synchronize
+// the simulator with the physical device.
 final boolean SYNC_SIMULATOR_WITH_DEVICE = false;
 
 // //////// Global variables. ////////
@@ -16,6 +26,8 @@ final boolean SYNC_SIMULATOR_WITH_DEVICE = false;
 Surface surface;
 BubbleRenderer br;
 Simulator simulator;
+
+// Underlying image objects for downsampling.
 PImage imageSurface;
 PImage imageRenderer;
 
@@ -26,11 +38,16 @@ boolean play = true;
 Serial masterPort;
 // The signal frames to distribute to slave Arduinos over time.
 short[][] signalFrames;
+// The current signal frame being rendered.
 int curSignalFrame = -1;
+// Sensor readings from all tanks.
 byte[] sensorReadings;
+// Countdowns of all tanks for random ripple patterns.
 int[] randomCountdowns;
 
 // //////// Global constants. ////////
+
+// //// UI parameters layout. ////
 
 final int SURFACE_WIDTH = 50;
 final int SURFACE_HEIGHT = 50;
@@ -51,9 +68,10 @@ final int WINDOW_WIDTH = 900;
 final int WINDOW_HEIGHT = 300;
 
 final int CELL_SIZE =
-RENDERER_VIEWPORT_WIDTH /
-(BubbleRenderer.N_NOZZLES_PER_TANK * BubbleRenderer.N_TANK_COLUMNS);
+  RENDERER_VIEWPORT_WIDTH / (BubbleRenderer.N_NOZZLES_PER_TANK * BubbleRenderer.N_TANK_COLUMNS);
 final int ELEM_SIZE = (int)(CELL_SIZE * 0.75);
+
+// //// Physical device parameters. ////
 
 // The total number of slaves (tanks).
 final int N_SLAVES = 22;
@@ -66,37 +84,47 @@ final int MANDATORY_DELAY = 100;
 // A trigger signal that makes master Arduino to request sensor data from slaves.
 final byte TRIGGER_SIGNAL_REQUEST_SENSOR_DATA = 42;
 
-// Random bubbles.
-final int RANDOM_BUBBLE_MIN_COUNTDOWN = 100;
-final int RANDOM_BUBBLE_MAX_COUNTDOWN = 800;
-final double RANDOM_BUBBLE_PROBABILITY = 0.2;
+// //// Random ripple parameters. ////
+
+// The minimum and maximum countdown (in frames) before the next ripple is
+// generated. This range is shared by all tanks, but each tank may have a
+// different countdown values within this range.
+final int RANDOM_RIPPLE_MIN_COUNTDOWN = 100;
+final int RANDOM_RIPPLE_MAX_COUNTDOWN = 800;
+// The probability of triggering a ripple when the countdown of a tank reaches 0.
+final double RANDOM_RIPPLE_PROBABILITY = 0.2;
 
 
 // //////// Initialization. ////////
 
 void setup() {
 
+  // Manually call `settings` in Processing 2.x.
   settings();
+
+  // Initialize UI.
 
   surface = new Surface(SURFACE_WIDTH, SURFACE_HEIGHT);
   br = new BubbleRenderer(#000001, false);
   simulator = new Simulator(SIMULATOR_WIDTH, SIMULATOR_HEIGHT);
 
-  sensorReadings = new byte[N_SLAVES];
+  // Initialize random pattern generation.
   randomCountdowns = new int[N_SLAVES];
   for (int tank = 0; tank < N_SLAVES; ++tank) {
-    randomCountdowns[tank] = int(random(RANDOM_BUBBLE_MIN_COUNTDOWN, RANDOM_BUBBLE_MAX_COUNTDOWN));
+    randomCountdowns[tank] =
+      int(random(RANDOM_RIPPLE_MIN_COUNTDOWN, RANDOM_RIPPLE_MAX_COUNTDOWN));
   }
 
-  // Set up serial port.
+  // Initialize physical device.
+  sensorReadings = new byte[N_SLAVES];
   String portName = Serial.list()[0];
   masterPort = new Serial(this, portName, 9600);
 
   delay(INITIAL_DELAY);
 }
 
+// Only recognized by Processing 3.x.
 void settings() {
-
   size(WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
@@ -112,9 +140,9 @@ void draw() {
     updateRandomly();
   }
 
-  if (USE_SIMULATOR) {
+  if (USE_SIMULATOR) {  // Use simulator.
     updateSimulator();
-  } else {
+  } else {  // Use physical device.
     updateDevice();
   }
 }
@@ -122,26 +150,6 @@ void draw() {
 // //////// Update. ////////
 
 // Backup function in case sensors do not work as expected.
-
-void updateRandomly() {
-
-  for (int tank = 0; tank < N_SLAVES; ++tank) {
-    int countdown = randomCountdowns[tank];
-    if (countdown == 0) {
-      if (random(0.0, 1.0) < RANDOM_BUBBLE_PROBABILITY) {
-        // Center in simulator's coordinate system.
-        PVector center = simulator.getTanks().get(tank).getCenter();
-        // Scale `center` to the surface's coordinate system.
-        center.div(SIMULATOR_WIDTH / SURFACE_WIDTH);
-        // Add a new ripple at the center.
-        surface.addRipple(new Ripple(center));
-      }
-      randomCountdowns[tank] = int(random(RANDOM_BUBBLE_MIN_COUNTDOWN, RANDOM_BUBBLE_MAX_COUNTDOWN));
-    } else {
-      --randomCountdowns[tank];
-    }
-  }
-}
 
 void updateFromSensors() {
 
@@ -164,11 +172,42 @@ void updateFromSensors() {
         center.div(SIMULATOR_WIDTH / SURFACE_WIDTH);
 
         // Print center coordinates in debugging message.
-        println(center.x + ", " + center.y);
+        // println(center.x + ", " + center.y);
 
         // Add a new ripple at the center.
         surface.addRipple(new Ripple(center));
       }
+    }
+  }
+}
+
+void updateRandomly() {
+
+  for (int tank = 0; tank < N_SLAVES; ++tank) {
+
+    int countdown = randomCountdowns[tank];
+    if (countdown == 0) {
+
+      // Under given probability when countdown reaches zero,
+      // trigger a ripple.
+      if (random(0.0, 1.0) < RANDOM_RIPPLE_PROBABILITY) {
+
+        // Center in simulator's coordinate system.
+        PVector center = simulator.getTanks().get(tank).getCenter();
+        // Scale `center` to the surface's coordinate system.
+        center.div(SIMULATOR_WIDTH / SURFACE_WIDTH);
+        // Add a new ripple at the center.
+        surface.addRipple(new Ripple(center));
+      }
+
+      // Reset countdown for that tank within the range.
+      randomCountdowns[tank] =
+        int(random(RANDOM_RIPPLE_MIN_COUNTDOWN, RANDOM_RIPPLE_MAX_COUNTDOWN));
+
+    } else {
+
+      // Update countdown.
+      --randomCountdowns[tank];
     }
   }
 }
@@ -214,7 +253,7 @@ void updateDevice() {
       signalFrames = br.getSignals(imageSurface);
       curSignalFrame = 0;
 
-      if (SYNC_SIMULATOR_WITH_DEVICE) {
+      if (SYNC_SIMULATOR_WITH_DEVICE) {  // Synchronize the simulator with physical device.
 
         // Send the signal frames to simulator as well.
         simulator.send(signalFrames);
@@ -229,7 +268,7 @@ void updateDevice() {
     // Send the signal frame to nozzle controllers.
     sendSignalFrame(signalFrame);
 
-    if (SYNC_SIMULATOR_WITH_DEVICE) {
+    if (SYNC_SIMULATOR_WITH_DEVICE) {  // Synchronize the simulator with physical device.
 
       PImage imageSimulator = simulator.render();
       image(imageSimulator, 
@@ -281,7 +320,7 @@ void sendSignalFrame(short[] signals) {
     // DEBUG: Even if the entry is set to a constant, slave will occasionally get
     // flipped bytes.
     // signal = 0x01ff;
-    if (i == 3) println(binary(signal));
+    // if (i == 3) println(binary(signal));
 
     // Write the low and high byte of each short-integer signal
     // to master port.
@@ -289,7 +328,7 @@ void sendSignalFrame(short[] signals) {
     byte hiByte = (byte)((signal & 0xFF00) >> 8);
 
     // DEBUG
-    if (i == 3) println(binary(hiByte) + " - " + binary(loByte));
+    // if (i == 3) println(binary(hiByte) + " - " + binary(loByte));
 
     masterPort.write(loByte);
     masterPort.write(hiByte);
