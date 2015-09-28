@@ -6,9 +6,10 @@
 
 import processing.serial.*;
 
-final boolean USE_SENSORS = true;
-final boolean USE_SIMULATOR = false;
-final boolean SYNC_SIMULATOR_WITH_DEVICE = true;
+final boolean USE_SENSORS = false;
+final boolean USE_RANDOM = true;
+final boolean USE_SIMULATOR = true;
+final boolean SYNC_SIMULATOR_WITH_DEVICE = false;
 
 // //////// Global variables. ////////
 
@@ -27,6 +28,7 @@ Serial masterPort;
 short[][] signalFrames;
 int curSignalFrame = -1;
 byte[] sensorReadings;
+int[] randomCountdowns;
 
 // //////// Global constants. ////////
 
@@ -49,8 +51,8 @@ final int WINDOW_WIDTH = 900;
 final int WINDOW_HEIGHT = 300;
 
 final int CELL_SIZE =
-  RENDERER_VIEWPORT_WIDTH /
-  (BubbleRenderer.N_NOZZLES_PER_TANK * BubbleRenderer.N_TANK_COLUMNS);
+RENDERER_VIEWPORT_WIDTH /
+(BubbleRenderer.N_NOZZLES_PER_TANK * BubbleRenderer.N_TANK_COLUMNS);
 final int ELEM_SIZE = (int)(CELL_SIZE * 0.75);
 
 // The total number of slaves (tanks).
@@ -64,17 +66,27 @@ final int MANDATORY_DELAY = 100;
 // A trigger signal that makes master Arduino to request sensor data from slaves.
 final byte TRIGGER_SIGNAL_REQUEST_SENSOR_DATA = 42;
 
+// Random bubbles.
+final int RANDOM_BUBBLE_MIN_COUNTDOWN = 100;
+final int RANDOM_BUBBLE_MAX_COUNTDOWN = 800;
+final double RANDOM_BUBBLE_PROBABILITY = 0.2;
+
+
 // //////// Initialization. ////////
 
 void setup() {
+
+  settings();
 
   surface = new Surface(SURFACE_WIDTH, SURFACE_HEIGHT);
   br = new BubbleRenderer(#000001, false);
   simulator = new Simulator(SIMULATOR_WIDTH, SIMULATOR_HEIGHT);
 
-  // //// Controller setup. ////
-
   sensorReadings = new byte[N_SLAVES];
+  randomCountdowns = new int[N_SLAVES];
+  for (int tank = 0; tank < N_SLAVES; ++tank) {
+    randomCountdowns[tank] = int(random(RANDOM_BUBBLE_MIN_COUNTDOWN, RANDOM_BUBBLE_MAX_COUNTDOWN));
+  }
 
   // Set up serial port.
   String portName = Serial.list()[0];
@@ -96,6 +108,10 @@ void draw() {
     updateFromSensors();
   }
 
+  if (USE_RANDOM) {
+    updateRandomly();
+  }
+
   if (USE_SIMULATOR) {
     updateSimulator();
   } else {
@@ -104,6 +120,28 @@ void draw() {
 }
 
 // //////// Update. ////////
+
+// Backup function in case sensors do not work as expected.
+
+void updateRandomly() {
+
+  for (int tank = 0; tank < N_SLAVES; ++tank) {
+    int countdown = randomCountdowns[tank];
+    if (countdown == 0) {
+      if (random(0.0, 1.0) < RANDOM_BUBBLE_PROBABILITY) {
+        // Center in simulator's coordinate system.
+        PVector center = simulator.getTanks().get(tank).getCenter();
+        // Scale `center` to the surface's coordinate system.
+        center.div(SIMULATOR_WIDTH / SURFACE_WIDTH);
+        // Add a new ripple at the center.
+        surface.addRipple(new Ripple(center));
+      }
+      randomCountdowns[tank] = int(random(RANDOM_BUBBLE_MIN_COUNTDOWN, RANDOM_BUBBLE_MAX_COUNTDOWN));
+    } else {
+      --randomCountdowns[tank];
+    }
+  }
+}
 
 void updateFromSensors() {
 
@@ -152,8 +190,8 @@ void updateSimulator() {
   // Display the simulator render.
   PImage imageSimulator = simulator.render();
   image(imageSimulator, 
-    SURFACE_VIEWPORT_WIDTH + RENDERER_VIEWPORT_WIDTH, 0, 
-    SIMULATOR_VIEWPORT_WIDTH, SIMULATOR_VIEWPORT_HEIGHT);
+  SURFACE_VIEWPORT_WIDTH + RENDERER_VIEWPORT_WIDTH, 0, 
+  SIMULATOR_VIEWPORT_WIDTH, SIMULATOR_VIEWPORT_HEIGHT);
 
   // Update the simulator only if the simulation is playing.
   if (play) simulator.update();
@@ -192,11 +230,11 @@ void updateDevice() {
     sendSignalFrame(signalFrame);
 
     if (SYNC_SIMULATOR_WITH_DEVICE) {
-      
+
       PImage imageSimulator = simulator.render();
-      image(imageSimulator,
-        SURFACE_VIEWPORT_WIDTH + RENDERER_VIEWPORT_WIDTH, 0,
-        SIMULATOR_VIEWPORT_WIDTH, SIMULATOR_VIEWPORT_HEIGHT);
+      image(imageSimulator, 
+      SURFACE_VIEWPORT_WIDTH + RENDERER_VIEWPORT_WIDTH, 0, 
+      SIMULATOR_VIEWPORT_WIDTH, SIMULATOR_VIEWPORT_HEIGHT);
       simulator.update();
     }
 
@@ -205,7 +243,7 @@ void updateDevice() {
 
     // Necessary delay.
     delay(MANDATORY_DELAY);
-    
+
     // Release master to request sensor data.
     masterPort.write(TRIGGER_SIGNAL_REQUEST_SENSOR_DATA);
   }
@@ -215,14 +253,14 @@ void updateRender() {
 
   // Update ripples on the surface.
   imageSurface = surface.render();
-  image(imageSurface, 0, 0,
-    SURFACE_VIEWPORT_WIDTH, SURFACE_VIEWPORT_HEIGHT);
+  image(imageSurface, 0, 0, 
+  SURFACE_VIEWPORT_WIDTH, SURFACE_VIEWPORT_HEIGHT);
   surface.update();
 
   // Update the bubble rendering with the updated surface.
   imageRenderer = br.render(imageSurface, "rect", CELL_SIZE, ELEM_SIZE);
-  image(imageRenderer, SURFACE_VIEWPORT_WIDTH, 0,
-    imageRenderer.width, imageRenderer.height);
+  image(imageRenderer, SURFACE_VIEWPORT_WIDTH, 0, 
+  imageRenderer.width, imageRenderer.height);
 }
 
 // //////// Signal frames access. ////////
@@ -249,10 +287,10 @@ void sendSignalFrame(short[] signals) {
     // to master port.
     byte loByte = (byte)(signal & 0xFF);
     byte hiByte = (byte)((signal & 0xFF00) >> 8);
- 
+
     // DEBUG
     if (i == 3) println(binary(hiByte) + " - " + binary(loByte));
-    
+
     masterPort.write(loByte);
     masterPort.write(hiByte);
   }
@@ -300,3 +338,4 @@ void keyPressed() {
     break;
   }
 }
+
