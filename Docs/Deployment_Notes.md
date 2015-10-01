@@ -117,3 +117,21 @@ Orthogonally, to enable/disable sensor readings in both cases:
 
 Finally, please let me know if you encounter any problems when deploying and
 running the program.
+
+### 7. Auto-Start
+
+To automatically start the program once Raspberry Pi is turned on:
+
+1. Start `raspi-config` in terminal mode or in terminal application:
+
+        sudo raspi-config
+
+2. Go to `Enable Boot to Desktop/Scratch` and choose to boot to desktop on startup.
+
+3. Once in desktop environment, open a terminal and launch `nano`:
+
+        sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
+
+The last line involving `processing-java` is responsible for auto-starting the program.
+
+- Reference: [How To Autostart Apps In Rasbian LXDE Desktop](http://www.raspberrypi-spy.co.uk/2014/05/how-to-autostart-apps-in-rasbian-lxde-desktop/)
