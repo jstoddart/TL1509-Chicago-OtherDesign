@@ -132,6 +132,8 @@ To automatically start the program once Raspberry Pi is turned on:
 
         sudo nano /etc/xdg/lxsession/LXDE-pi/autostart
 
-The last line involving `processing-java` is responsible for auto-starting the program.
+The last line involving `processing-java` is responsible for auto-starting the program. It should be something like this:
+
+        /home/pi/processing-2.2.1/processing-java --run --force --sketch=/home/pi/TL1509-Chicago-OtherDesign/Processing/p2ma --output=/home/pi/TL1509-Chicago-OtherDesign/Processing/p2ma/out
 
 - Reference: [How To Autostart Apps In Rasbian LXDE Desktop](http://www.raspberrypi-spy.co.uk/2014/05/how-to-autostart-apps-in-rasbian-lxde-desktop/)
